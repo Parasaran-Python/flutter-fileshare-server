@@ -104,7 +104,7 @@ class HttpServerService {
     // Handle file download
     if (uri.path.startsWith('files/')) {
       final filename = uri.path.substring(6);
-      return await _handleFileDownload(filename);
+      return await _handleFileDownload(request, filename);
     }
 
     // Handle file list request (JSON)
@@ -165,8 +165,8 @@ class HttpServerService {
     }
   }
 
-  /// Handle file download with streaming for large files
-  Future<shelf.Response> _handleFileDownload(String filename) async {
+  /// Handle file download with streaming for large files and range request support
+  Future<shelf.Response> _handleFileDownload(shelf.Request request, String filename) async {
     try {
       // URL decode the filename to handle special characters
       final decodedFilename = Uri.decodeComponent(filename);
@@ -179,18 +179,117 @@ class HttpServerService {
       // Get file size for Content-Length header
       final fileSize = await file.length();
 
-      // Stream the file instead of loading it all into memory
-      // This is crucial for large files
-      return shelf.Response.ok(
-        file.openRead(),
+      // Always indicate that we support range requests
+      final baseHeaders = {
+        'Content-Type': 'application/octet-stream',
+        'Content-Disposition': 'attachment; filename="$decodedFilename"',
+        'Accept-Ranges': 'bytes',
+      };
+
+      // Check if this is a range request
+      final rangeHeader = request.headers['range'];
+      if (rangeHeader == null || !rangeHeader.startsWith('bytes=')) {
+        // No range request - send the entire file
+        return shelf.Response.ok(
+          file.openRead(),
+          headers: {
+            ...baseHeaders,
+            'Content-Length': fileSize.toString(),
+          },
+        );
+      }
+
+      // Parse the range request
+      final rangeResult = _parseRangeHeader(rangeHeader, fileSize);
+      if (rangeResult == null) {
+        // Invalid range request
+        return shelf.Response(
+          416, // Range Not Satisfiable
+          body: 'Invalid range request',
+          headers: {
+            'Content-Range': 'bytes */$fileSize',
+          },
+        );
+      }
+
+      final start = rangeResult['start'] as int;
+      final end = rangeResult['end'] as int;
+      final length = end - start + 1;
+
+      // Stream only the requested portion of the file
+      // This is crucial for multi-threaded downloads
+      return shelf.Response(
+        206, // Partial Content
+        body: file.openRead(start, end + 1),
         headers: {
-          'Content-Type': 'application/octet-stream',
-          'Content-Disposition': 'attachment; filename="$decodedFilename"',
-          'Content-Length': fileSize.toString(),
+          ...baseHeaders,
+          'Content-Length': length.toString(),
+          'Content-Range': 'bytes $start-$end/$fileSize',
         },
       );
     } catch (e) {
       return shelf.Response.internalServerError(body: 'Download failed: $e');
+    }
+  }
+
+  /// Parse the Range header and return start and end byte positions
+  /// Returns null if the range is invalid
+  Map<String, int>? _parseRangeHeader(String rangeHeader, int fileSize) {
+    try {
+      // Remove 'bytes=' prefix
+      final range = rangeHeader.substring(6);
+      
+      // Handle multiple ranges by only supporting the first one
+      final firstRange = range.split(',').first.trim();
+      
+      final parts = firstRange.split('-');
+      if (parts.length != 2) {
+        return null;
+      }
+
+      int start;
+      int end;
+
+      if (parts[0].isEmpty) {
+        // Suffix range: -500 means last 500 bytes
+        final suffixLength = int.tryParse(parts[1]);
+        if (suffixLength == null || suffixLength <= 0) {
+          return null;
+        }
+        start = fileSize - suffixLength;
+        end = fileSize - 1;
+        if (start < 0) {
+          start = 0;
+        }
+      } else if (parts[1].isEmpty) {
+        // Open-ended range: 500- means from byte 500 to end
+        start = int.tryParse(parts[0]) ?? -1;
+        if (start < 0) {
+          return null;
+        }
+        end = fileSize - 1;
+      } else {
+        // Both start and end specified
+        start = int.tryParse(parts[0]) ?? -1;
+        end = int.tryParse(parts[1]) ?? -1;
+        if (start < 0 || end < 0 || start > end) {
+          return null;
+        }
+      }
+
+      // Validate range
+      if (start >= fileSize) {
+        return null;
+      }
+
+      // Clamp end to file size
+      if (end >= fileSize) {
+        end = fileSize - 1;
+      }
+
+      return {'start': start, 'end': end};
+    } catch (e) {
+      return null;
     }
   }
 

@@ -17,6 +17,7 @@ A beautiful and modern Flutter application that runs an HTTP server with file ho
 - File size display
 - Easy file management
 - **Streaming downloads for large files** - efficient memory usage
+- **HTTP Range request support** - enables multi-threaded/resumable downloads
 
 📤 **File Upload**
 - Drag-and-drop file upload interface
@@ -108,6 +109,8 @@ Or use your IDE's run button.
 
 - Click any file name in the web interface
 - File will download directly
+- **Multi-threaded downloads supported**: Use download managers like IDM, aria2, or wget with `-c` flag for faster, resumable downloads
+- **Resume downloads**: Interrupted downloads can be resumed from where they left off
 
 ### 5. IP Whitelisting (Optional)
 
@@ -281,6 +284,30 @@ Uploads a file to the server with multipart/form-data.
 **GET** `/files/{filename}`
 
 Downloads a file from the server. The filename is URL-encoded.
+
+**Headers:**
+- `Accept-Ranges: bytes` - Always present to indicate range request support
+- `Content-Range: bytes <start>-<end>/<total>` - Present in 206 responses
+- `Content-Length: <size>` - Size of the response (full file or partial)
+- `Content-Disposition: attachment; filename="<name>"` - Download filename
+- `Content-Type: application/octet-stream` - Binary file type
+
+**Range Requests:**
+The server supports HTTP Range requests for multi-threaded and resumable downloads.
+
+**Request Header:**
+- `Range: bytes=<start>-<end>` - Request a specific byte range
+
+**Examples:**
+- `Range: bytes=0-499` - First 500 bytes
+- `Range: bytes=500-999` - Bytes 500-999
+- `Range: bytes=500-` - From byte 500 to end
+- `Range: bytes=-500` - Last 500 bytes
+
+**Response Codes:**
+- `200 OK` - Full file (no range requested)
+- `206 Partial Content` - Partial file (range requested)
+- `416 Range Not Satisfiable` - Invalid range
 
 **Response:** Binary file data with `Content-Disposition` header.
 
