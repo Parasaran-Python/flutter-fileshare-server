@@ -19,19 +19,21 @@ A beautiful and modern Flutter application that runs an HTTP server with file ho
 - **Streaming downloads for large files** - efficient memory usage
 - **HTTP Range request support** - enables multi-threaded/resumable downloads
 
-📤 **File Upload**
-- Drag-and-drop file upload interface
-- Click to browse and upload
+📤 **File Upload & Import**
+- **Import files from device** - Pick files directly from your phone's storage via the app UI
+- Drag-and-drop file upload interface (web)
+- Click to browse and upload (web)
 - Real-time upload progress bar with percentage
 - **Live upload speed indicator** (KB/s, MB/s)
 - **Shows uploaded size / total size** (e.g., "15.3 MB / 50 MB")
 - Cancel upload button during transfer
 - JSON API responses
-- Multiple file support
+- Multiple file support (both app and web)
 - Supports all file types (binary and text files)
 - Sequential upload with visual feedback
 - **Streaming upload for large files** - no memory bloat, handles multi-GB files efficiently
 - **Atomic file uploads** - files written to temp directory first, moved to final location only after successful upload
+- **Automatic filename conflict resolution** - duplicates get timestamped names
 
 🔒 **IP Whitelisting**
 - Whitelist specific IP addresses for access control
@@ -94,7 +96,14 @@ Or use your IDE's run button.
   - File upload section (drag & drop or click)
   - List of available files with download links
 
-### 3. Upload Files
+### 3. Add Files to Share
+
+**Via App (Import from Device):**
+- In the "Shared Files" section, tap the **"Import Files from Device"** button
+- Select one or multiple files from your device storage
+- The app will copy them to the shared directory
+- Files are immediately available for sharing via the web interface
+- If a file with the same name exists, a timestamp is added automatically
 
 **Via Web Interface:**
 - Drag files onto the drop zone
@@ -142,19 +151,19 @@ Or use your IDE's run button.
 
 ## File Storage Location
 
-Files are stored in the app's external media directory:
-- **Android**: `/storage/emulated/0/Android/media/com.example.flutter_host_server/files/shared_files/`
+Files are stored in the app's private data directory:
+- **Android**: `/storage/emulated/0/Android/data/com.example.flutter_host_server/files/shared_files/`
 - **iOS**: App's document directory
 - **Desktop**: `Documents/FlutterFileServer/`
 
 The exact path is displayed in the "Shared Files" section of the app.
 
-**Android Note**: This is the app's external media directory, which means:
-- Files are stored in the media folder (not data folder)
-- No special permissions required
+**Android Note**: This is the app's private data directory, which means:
+- Files are fully accessible by the app
 - Files are deleted when you uninstall the app
-- You can access files via USB or file manager (Android/media folder)
-- Better suited for media files (videos, images, audio, etc.)
+- Files can be accessed via USB debugging (adb) or with root access
+- **Use the "Import Files from Device" button in the app to add files** from your device storage
+- No issues with scoped storage restrictions
 
 ## Permissions
 
@@ -165,8 +174,10 @@ The app requires the following permissions:
 - `ACCESS_WIFI_STATE` - To get WiFi information
 - `ACCESS_FINE_LOCATION` - To get WiFi IP address (for getting WiFi network info)
 - `ACCESS_COARSE_LOCATION` - For network info
+- `READ_EXTERNAL_STORAGE` (Android 12 and below) - To pick files from device storage
+- `READ_MEDIA_IMAGES`, `READ_MEDIA_VIDEO`, `READ_MEDIA_AUDIO` (Android 13+) - To pick files from device storage
 
-**Note**: App-specific external storage doesn't require additional storage permissions. The location permission is only needed to get your WiFi IP address for displaying the server URL.
+**Note**: Storage permissions are only requested when you use the "Import Files from Device" feature. The app will prompt you for permission the first time you use it.
 
 ### iOS
 The app requires:
@@ -217,7 +228,13 @@ The app requires:
 - Tap the refresh button in the "Shared Files" section
 - Check the file storage location (shown in the app)
 - Restart the server
-- You can access the files via USB or a file manager that can browse Android/data folders
+- **To add files manually**: Use the "Import Files from Device" button in the app instead of manually copying files to the directory
+
+### Permission denied when importing files
+
+- The app will request storage permissions when you first use the import feature
+- If you denied permissions, go to Settings → Apps → Flutter Host Server → Permissions and enable storage access
+- Or tap "Open Settings" when the permission dialog appears
 
 ### Upload not working
 

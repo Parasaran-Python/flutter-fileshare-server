@@ -48,6 +48,12 @@ dependencies:
   
   # Keep screen awake
   wakelock_plus: ^1.2.5
+  
+  # File picker
+  file_picker: ^8.0.0
+  
+  # Permission handler
+  permission_handler: ^11.0.1
 
 dev_dependencies:
   flutter_test:
