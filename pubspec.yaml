@@ -54,6 +54,9 @@ dependencies:
   
   # Permission handler
   permission_handler: ^11.0.1
+  
+  # Open files and folders externally
+  open_file: ^3.5.7
 
 dev_dependencies:
   flutter_test:

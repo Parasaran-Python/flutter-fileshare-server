@@ -8,6 +8,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:open_file/open_file.dart';
 import '../services/http_server_service.dart';
 
 class ServerHomePage extends StatefulWidget {
@@ -186,6 +187,40 @@ class _ServerHomePageState extends State<ServerHomePage> {
           duration: Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _openFolderInExternalApp() async {
+    if (_sharedDirectory == null) {
+      _showError('Shared directory not initialized');
+      return;
+    }
+
+    try {
+      final result = await OpenFile.open(_sharedDirectory!.path);
+      
+      if (mounted) {
+        if (result.type == ResultType.done) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Opening folder...'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        } else if (result.type == ResultType.noAppToOpen) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No file manager app found to open the folder'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else if (result.type == ResultType.error) {
+          _showError('Failed to open folder: ${result.message}');
+        }
+      }
+    } catch (e) {
+      _showError('Failed to open folder: $e');
     }
   }
 
@@ -474,6 +509,13 @@ class _ServerHomePageState extends State<ServerHomePage> {
                       'Location: ${_sharedDirectory!.path}',
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.folder_open, size: 18),
+                    tooltip: 'Open in file manager',
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: _openFolderInExternalApp,
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
