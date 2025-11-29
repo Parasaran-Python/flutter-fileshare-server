@@ -319,6 +319,11 @@ class HtmlGenerator {
             font-weight: 500;
         }
         
+        .eta-text {
+            color: #667eea;
+            font-weight: 500;
+        }
+        
         .size-text {
             color: #999;
         }
@@ -408,6 +413,19 @@ class HtmlGenerator {
             return (bytesPerSecond / (1024 * 1024)).toFixed(2) + ' MB/s';
         }
         
+        function formatTime(seconds) {
+            if (seconds < 1) return '< 1s';
+            if (seconds < 60) return Math.round(seconds) + 's';
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.round(seconds % 60);
+            if (minutes < 60) {
+                return remainingSeconds > 0 ? minutes + 'm ' + remainingSeconds + 's' : minutes + 'm';
+            }
+            const hours = Math.floor(minutes / 60);
+            const remainingMinutes = minutes % 60;
+            return remainingMinutes > 0 ? hours + 'h ' + remainingMinutes + 'm' : hours + 'h';
+        }
+        
         function refreshFileList() {
             fetch('/api/files')
                 .then(response => response.json())
@@ -487,6 +505,7 @@ class HtmlGenerator {
                     </div>
                     <div class="upload-details">
                         <span class="speed-text" id="speed_\${uploadId}">0 KB/s</span>
+                        <span class="eta-text" id="eta_\${uploadId}">ETA: Calculating...</span>
                         <span class="size-text" id="size_\${uploadId}">0 B / \${formatBytes(file.size)}</span>
                     </div>
                 \`;
@@ -512,6 +531,7 @@ class HtmlGenerator {
                         const percentComplete = (e.loaded / e.total) * 100;
                         const progressFill = document.getElementById('progress_' + uploadId);
                         const speedText = document.getElementById('speed_' + uploadId);
+                        const etaText = document.getElementById('eta_' + uploadId);
                         const sizeText = document.getElementById('size_' + uploadId);
                         
                         if (progressFill) {
@@ -538,6 +558,18 @@ class HtmlGenerator {
                             
                             const avgSpeed = speeds.reduce((a, b) => a + b, 0) / speeds.length;
                             speedText.textContent = formatSpeed(avgSpeed);
+                            
+                            // Calculate and display ETA
+                            if (etaText && avgSpeed > 0) {
+                                const remainingBytes = e.total - e.loaded;
+                                const etaSeconds = remainingBytes / avgSpeed;
+                                
+                                if (percentComplete >= 99.9) {
+                                    etaText.textContent = 'ETA: Almost done...';
+                                } else {
+                                    etaText.textContent = 'ETA: ' + formatTime(etaSeconds);
+                                }
+                            }
                             
                             lastTime = currentTime;
                             lastLoaded = e.loaded;
