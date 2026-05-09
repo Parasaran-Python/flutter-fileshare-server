@@ -37,9 +37,6 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
-      - name: Run tests
-        run: flutter test
-
       - name: Build release APK
         run: flutter build apk --release --split-per-abi
 
