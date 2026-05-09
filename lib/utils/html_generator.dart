@@ -492,7 +492,7 @@ class HtmlGenerator {
                 uploadItem.className = 'upload-item';
                 uploadItem.id = 'upload_' + uploadId;
                 
-                uploadItem.innerHTML = \`
+                uploadItem.innerHTML = `
                     <div class="upload-header">
                         <div class="upload-filename" title="\${file.name}">\${file.name}</div>
                         <div class="upload-actions">
@@ -508,7 +508,7 @@ class HtmlGenerator {
                         <span class="eta-text" id="eta_\${uploadId}">ETA: Calculating...</span>
                         <span class="size-text" id="size_\${uploadId}">0 B / \${formatBytes(file.size)}</span>
                     </div>
-                \`;
+                `;
                 
                 uploadsContainer.appendChild(uploadItem);
                 
